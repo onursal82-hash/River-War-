@@ -6,7 +6,6 @@ const ASSETS_TO_CACHE = [
   './assets/bullet.png',
   './assets/enemy_jet.png',
   './assets/enemy_heli.png',
-  './assets/enemy_boat.png',
   './assets/enemy_carrier.png',
   './assets/explosion.png',
   './assets/fuelstation.png',

@@ -3,14 +3,14 @@ const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './assets/player_jet.png',
-  './assets/Bullet.png',
-  './assets/Enemy_Jet.png',
-  './assets/Enemy_Heli.png',
-  './assets/Enemy_Boat.png',
-  './assets/Enemy_Carrier.png',
+  './assets/bullet.png',
+  './assets/enemy_jet.png',
+  './assets/enemy_heli.png',
+  './assets/enemy_boat.png',
+  './assets/enemy_carrier.png',
   './assets/explosion.png',
-  './assets/FuelStation.png',
-  './assets/FuelBar.png',
+  './assets/fuelstation.png',
+  './assets/fuelbar.png',
   './assets/click.mp3',
   './assets/explosion_1.mp3',
   './assets/explosion_2.mp3',
@@ -19,13 +19,20 @@ const ASSETS_TO_CACHE = [
   './assets/engine.mp3'
 ];
 
-// Install Event: Cache assets
+// Install Event: Cache assets robustly
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Opened cache');
-        return cache.addAll(ASSETS_TO_CACHE);
+        // Robust caching: If one fails, others still get cached
+        return Promise.all(
+          ASSETS_TO_CACHE.map(url => {
+            return cache.add(url).catch(err => {
+              console.warn('Failed to cache asset:', url, err);
+            });
+          })
+        );
       })
   );
 });

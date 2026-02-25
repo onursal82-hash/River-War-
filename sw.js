@@ -1,4 +1,4 @@
-const CACHE_NAME = 'river-war-v1';
+const CACHE_NAME = 'river-war-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

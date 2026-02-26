@@ -1,0 +1,21 @@
+{
+  "name": "River War",
+  "short_name": "River War",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#00aaff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "player_jet.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "player_jet.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -414,6 +414,7 @@ const CONFIG = {
 
 // --- ASSET LIST ---
 // Using relative paths to ensure compatibility with subdirectories on Vercel
+// --- ASSET LIST ---
 const ASSETS = {
     Player: 'player_jet.png',
     Bullet: 'bullet.png',
@@ -442,9 +443,55 @@ class AssetLoader {
         this.audioObjects = {}; 
         this.totalCount = Object.keys(ASSETS).length + Object.keys(AUDIO_ASSETS).length;
         this.loadedCount = 0;
-        
-        // Audio Pool for high performance
         this.audioPool = {};
+        this.poolSize = 5;
+    }
+
+    async loadAll() {
+        const imagePromises = Object.entries(ASSETS).map(([key, url]) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                // DİKKAT: Başına hiçbir şey eklemiyoruz, direkt URL
+                img.src = url; 
+                img.onload = () => {
+                    this.images[key] = img;
+                    this.loadedCount++;
+                    resolve();
+                };
+                img.onerror = () => {
+                    console.error("Resim yüklenemedi: " + url);
+                    resolve(); // Hata olsa da devam etsin oyun takılmasın
+                };
+            });
+        });
+
+        const audioPromises = Object.entries(AUDIO_ASSETS).map(([key, url]) => {
+            return new Promise((resolve) => {
+                const audio = new Audio();
+                audio.src = url; // Başına 'assets/' eklenmediğinden emin olduk
+                audio.oncanplaythrough = () => {
+                    this.audioObjects[key] = audio;
+                    this.createAudioPool(key, url);
+                    this.loadedCount++;
+                    resolve();
+                };
+                audio.onerror = () => {
+                    console.error("Ses yüklenemedi: " + url);
+                    resolve();
+                };
+            });
+        });
+
+        await Promise.all([...imagePromises, ...audioPromises]);
+    }
+
+    createAudioPool(key, url) {
+        this.audioPool[key] = [];
+        for (let i = 0; i < this.poolSize; i++) {
+            this.audioPool[key].push(new Audio(url));
+        }
+    }
+}
         this.poolSize = 5; // 5 clones per sound
     }
 

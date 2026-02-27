@@ -436,14 +436,13 @@ const AUDIO_ASSETS = {
     engine: 'engine.mp3'
 };
 
-// --- ASSET MANAGER ---
+// --- ASSET MANAGER --- (BU KISMI ESKİSİYLE DEĞİŞTİR)
 class AssetLoader {
     constructor() {
         this.images = {};
-        this.audioObjects = {}; 
+        this.audioPool = {}; 
         this.totalCount = Object.keys(ASSETS).length + Object.keys(AUDIO_ASSETS).length;
         this.loadedCount = 0;
-        this.audioPool = {};
         this.poolSize = 5;
     }
 
@@ -451,16 +450,17 @@ class AssetLoader {
         const imagePromises = Object.entries(ASSETS).map(([key, url]) => {
             return new Promise((resolve) => {
                 const img = new Image();
-                // DİKKAT: Başına hiçbir şey eklemiyoruz, direkt URL
-                img.src = url; 
+                img.src = url; // Başına hiçbir şey eklemiyoruz
                 img.onload = () => {
                     this.images[key] = img;
                     this.loadedCount++;
+                    this.updateLoadingText();
                     resolve();
                 };
                 img.onerror = () => {
-                    console.error("Resim yüklenemedi: " + url);
-                    resolve(); // Hata olsa da devam etsin oyun takılmasın
+                    console.error("Resim bulunamadı: " + url);
+                    this.loadedCount++; // Takılmasın diye devam
+                    resolve();
                 };
             });
         });
@@ -468,128 +468,54 @@ class AssetLoader {
         const audioPromises = Object.entries(AUDIO_ASSETS).map(([key, url]) => {
             return new Promise((resolve) => {
                 const audio = new Audio();
-                audio.src = url; // Başına 'assets/' eklenmediğinden emin olduk
+                audio.src = url;
                 audio.oncanplaythrough = () => {
-                    this.audioObjects[key] = audio;
-                    this.createAudioPool(key, url);
+                    this.audioPool[key] = [];
+                    for(let i=0; i<this.poolSize; i++) {
+                        const clone = new Audio(url);
+                        if(key === 'engine') { clone.loop = true; clone.volume = 0.3; }
+                        this.audioPool[key].push(clone);
+                    }
                     this.loadedCount++;
+                    this.updateLoadingText();
                     resolve();
                 };
                 audio.onerror = () => {
-                    console.error("Ses yüklenemedi: " + url);
+                    console.error("Ses bulunamadı: " + url);
+                    this.loadedCount++;
                     resolve();
                 };
             });
         });
 
         await Promise.all([...imagePromises, ...audioPromises]);
+        document.getElementById('loading-screen').style.display = 'none';
     }
 
-    createAudioPool(key, url) {
-        this.audioPool[key] = [];
-        for (let i = 0; i < this.poolSize; i++) {
-            this.audioPool[key].push(new Audio(url));
-        }
-    }
-}
-        this.poolSize = 5; // 5 clones per sound
+    updateLoadingText() {
+        const percent = Math.floor((this.loadedCount / this.totalCount) * 100);
+        const el = document.getElementById('loading-text');
+        if(el) el.innerText = `Loading Assets... ${percent}%`;
     }
 
-    loadAll(callback) {
-        if (this.totalCount === 0) return callback();
-
-        const checkDone = () => {
-            this.loadedCount++;
-            if (this.loadedCount >= this.totalCount) {
-                this.initAudioPool(); // Initialize pool after loading
-                callback();
-            }
-        };
-
-        // Load Images
-        for (let key in ASSETS) {
-            const img = new Image();
-            img.src = ASSETS[key];
-            img.onload = checkDone;
-            img.onerror = () => {
-                this.images[key] = null; 
-                checkDone();
-            };
-            this.images[key] = img;
-        }
-
-        // Load Audio
-        for (let key in AUDIO_ASSETS) {
-            const audio = new Audio();
-            audio.src = AUDIO_ASSETS[key];
-            audio.preload = 'auto';
-            this.audioObjects[key] = audio;
-            checkDone();
-        }
-    }
-
-    initAudioPool() {
-        for (let key in this.audioObjects) {
-            this.audioPool[key] = [];
-            const original = this.audioObjects[key];
-            if (!original) continue;
-            
-            for(let i=0; i<this.poolSize; i++) {
-                const clone = original.cloneNode();
-                if (key === 'engine') {
-                    clone.loop = true;
-                    clone.volume = 0.3; // 30% volume for engine
-                } else {
-                    clone.volume = (key === 'shot') ? 0.2 : (key.startsWith('explosion') ? 0.8 : 0.5);
-                }
-                this.audioPool[key].push(clone);
-            }
-        }
-    }
-
-    getImage(key) {
-        return this.images[key];
-    }
+    getImage(key) { return this.images[key]; }
 
     playAudio(key) {
         const pool = this.audioPool[key];
-        if (!pool || pool.length === 0) return;
-        
-        // Find a free sound or recycle the oldest
-        let sound = pool.find(s => s.paused || s.ended);
-        
-        // Special case for Engine: Use first instance if not playing
-        if (key === 'engine') {
-            sound = pool[0];
-            if (!sound.paused) return; // Already playing
-        } else if (!sound) {
-            // If all busy, steal the first one (oldest usually)
-            sound = pool[0];
-            sound.currentTime = 0;
-        }
-        
+        if (!pool) return;
+        let sound = pool.find(s => s.paused || s.ended) || pool[0];
         try {
-            if (key !== 'engine') sound.currentTime = 0;
-            const promise = sound.play();
-            if (promise !== undefined) {
-                promise.catch(() => {});
-            }
-        } catch (e) {
-            // Ignore
-        }
+            sound.currentTime = 0;
+            sound.play().catch(() => {});
+        } catch (e) {}
     }
 
     stopAudio(key) {
         const pool = this.audioPool[key];
-        if (!pool) return;
-        pool.forEach(s => {
-            s.pause();
-            s.currentTime = 0;
-        });
+        if (pool) pool.forEach(s => { s.pause(); s.currentTime = 0; });
     }
 }
-
-// --- INPUT HANDLER ---
+// --- INPUT HANDLER --- (BURADAN AŞAĞISI AYNI KALSIN)
 class InputHandler {
     constructor() {
         this.keys = {};
